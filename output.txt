@@ -1,0 +1,71 @@
+Andrew Schneider
+Assignment 3 - Buddy Buffers
+
+
+----------Begin Test Output----------
+Expected:
+	Is tight: no
+	Buffers of size  511: 10
+
+Actual:
+Report:
+	Is tight: no
+	Buffers of size   511:    10
+
+Requesting buffer of size 700, should fail.
+Failed to get block
+
+Requesting buffer of size 7, should succeed
+Buffer allocated, index returned: 1
+Report:
+	Is tight: no
+	Buffers of size     7:     1
+	Buffers of size    15:     1
+	Buffers of size    31:     1
+	Buffers of size    63:     1
+	Buffers of size   127:     1
+	Buffers of size   255:     1
+	Buffers of size   511:     9
+
+Returning buffer at index 1
+Report:
+	Is tight: no
+	Buffers of size   511:    10
+
+Requesting 10 max size blocks
+Report:
+	Is tight: yes
+	No free buffers left.
+
+Requesting another valid buffer, should fail
+Request returned -1, success
+Report:
+	Is tight: yes
+	No free buffers left.
+
+Returning all buffers.
+Report:
+	Is tight: no
+	Buffers of size   511:    10
+
+Requesting three 7 word buffers
+Report:
+	Is tight: no
+	Buffers of size     7:     1
+	Buffers of size    31:     1
+	Buffers of size    63:     1
+	Buffers of size   127:     1
+	Buffers of size   255:     1
+	Buffers of size   511:     9
+
+Returning first buffer, should have two free 7 word buffers
+Report:
+	Is tight: no
+	Buffers of size     7:     2
+	Buffers of size    31:     1
+	Buffers of size    63:     1
+	Buffers of size   127:     1
+	Buffers of size   255:     1
+	Buffers of size   511:     9
+
+-----------End Test Output-----------
