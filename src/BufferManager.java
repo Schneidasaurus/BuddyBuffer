@@ -74,6 +74,24 @@ public class BufferManager {
             bufferList.remove(0);
             printMessage(manager.createReport(), writer);
 
+            while (bufferList.size() > 0){
+                manager.returnBuffer(bufferList.remove(0));
+            }
+
+            printMessage("Requesting random-sized buffers until manager returns -1", writer);
+            for (int i = 0; i != -1; ){
+                Random rng = new Random();
+                i = manager.getBlock(rng.nextInt(511-7) + 7);
+                if (i != -1) bufferList.add(i);
+            }
+            printMessage(manager.createReport(), writer);
+
+            printMessage("Returning all buffers", writer);
+            while (bufferList.size() > 0){
+                manager.returnBuffer(bufferList.remove(0));
+            }
+            printMessage(manager.createReport(), writer);
+
             printMessage("-----------End Test Output-----------", writer);
         }
         catch (IOException e){
@@ -142,13 +160,15 @@ public class BufferManager {
         int block = index / MAX_BLOCK_SIZE;
         int relativeIndex = index % MAX_BLOCK_SIZE;
         BuddyBuffer bufferToSplit = bufferBlocks[block][relativeIndex];
-        int size = bufferToSplit.getSize() / 2;
+        int newSize = bufferToSplit.getSize() / 2;
 
-        if (size < Math.pow(2,3)) return false;
+        if (newSize < Math.pow(2,3)) return false;
 
-        bufferToSplit.setSize(size);
-        BuddyBuffer newBuffer = new BuddyBuffer(index + size, size, bufferToSplit.getNextBuffer(), bufferToSplit);
-        bufferBlocks[block][relativeIndex+size] = newBuffer;
+        bufferToSplit.setSize(newSize);
+        BuddyBuffer newBuffer = new BuddyBuffer(index + newSize, newSize);
+        newBuffer.setNextBuffer(bufferToSplit.getNextBuffer());
+        newBuffer.setPrevBuffer(bufferToSplit);
+        bufferBlocks[block][relativeIndex+newSize] = newBuffer;
         if (bufferToSplit.getNextBuffer() != null)bufferToSplit.getNextBuffer().setPrevBuffer(newBuffer);
         bufferToSplit.setNextBuffer(newBuffer);
         return true;
@@ -186,10 +206,10 @@ public class BufferManager {
             int i = ((bufferToJoin.getIndex() / bufferToJoin.getSize()) % 2);
 
             if (i == 0) { // buddy is next buffer
-                if (bufferToJoin.getNextBuffer() == null || bufferToJoin.getNextBuffer().isAssigned()) return; // Buffer's buddy is assigned
+                if (bufferToJoin.getNextBuffer() == null || bufferToJoin.getNextBuffer().getSize() != bufferToJoin.getSize() || bufferToJoin.getNextBuffer().isAssigned()) return; // Buffer's buddy is assigned
                 joinBuffers(bufferToJoin);
             } else { // buddy is previous buffer
-                if (bufferToJoin.getPrevBuffer() == null || bufferToJoin.getPrevBuffer().isAssigned()) return; // Buffer's buddy is assigned
+                if (bufferToJoin.getPrevBuffer() == null || bufferToJoin.getPrevBuffer().getSize() != bufferToJoin.getSize()|| bufferToJoin.getPrevBuffer().isAssigned()) return; // Buffer's buddy is assigned
                 else {
                     bufferToJoin = bufferToJoin.getPrevBuffer();
                     joinBuffers(bufferToJoin);
@@ -199,9 +219,11 @@ public class BufferManager {
     }
 
     private void joinBuffers(BuddyBuffer buffer){
-        buffer.setNextBuffer(buffer.getNextBuffer().getNextBuffer());
-        bufferBlocks[buffer.getIndex()/MAX_BLOCK_SIZE][buffer.getIndex()+buffer.getSize()] = null;
-        if (buffer.getNextBuffer() != null)buffer.getNextBuffer().setPrevBuffer(buffer);
+        BuddyBuffer bufferToDelete = buffer.getNextBuffer();
+        BuddyBuffer newNextBuffer = bufferToDelete.getNextBuffer();
+        bufferBlocks[bufferToDelete.getIndex()/MAX_BLOCK_SIZE][bufferToDelete.getIndex()%MAX_BLOCK_SIZE] = null;
+        buffer.setNextBuffer(newNextBuffer);
+        if (newNextBuffer != null)newNextBuffer.setPrevBuffer(buffer);
         buffer.setSize(buffer.getSize()*2);
     }
 

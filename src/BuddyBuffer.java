@@ -19,10 +19,6 @@ public class BuddyBuffer {
         init(index, size, null, null);
     }
 
-    public BuddyBuffer(int index, int size, BuddyBuffer prevBuffer){
-        init(index, size, null, prevBuffer);
-    }
-
     /**
      *
      * @param index index of buffer
