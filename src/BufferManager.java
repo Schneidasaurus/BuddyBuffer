@@ -1,3 +1,8 @@
+/*
+ *  Andrew Schneider
+ *  Assignment 3 - Buddy Buffers
+ */
+
 import java.io.BufferedWriter;
 import java.io.FileWriter;
 import java.io.IOException;
@@ -79,9 +84,10 @@ public class BufferManager {
             }
 
             printMessage("Requesting random-sized buffers until manager returns -1", writer);
+            int[] validSizes = new int[] {7,15,31,63,127,255,511};
+            Random rng = new Random();
             for (int i = 0; i != -1; ){
-                Random rng = new Random();
-                i = manager.getBlock(rng.nextInt(511-7) + 7);
+                i = manager.getBlock(validSizes[rng.nextInt(validSizes.length)]);
                 if (i != -1) bufferList.add(i);
             }
             printMessage(manager.createReport(), writer);
@@ -228,7 +234,7 @@ public class BufferManager {
     }
 
     private String createReport(){
-        HashMap<Integer, Integer> map = new HashMap<>();
+        HashMap<Integer, Integer> freeBuffers = new HashMap<>();
         BuddyBuffer temp = null;
         for (int i = 0; i < NUM_BLOCKS; i++) {
             temp = bufferBlocks[i][0];
@@ -237,11 +243,11 @@ public class BufferManager {
                     temp = temp.getNextBuffer();
                     continue;
                 }
-                if (map.containsKey(temp.getSize())){
-                    int n = map.get(temp.getSize());
-                    map.put(temp.getSize(), n + 1);
+                if (freeBuffers.containsKey(temp.getSize())){
+                    int n = freeBuffers.get(temp.getSize());
+                    freeBuffers.put(temp.getSize(), n + 1);
                 }
-                else map.put(temp.getSize(), 1);
+                else freeBuffers.put(temp.getSize(), 1);
                 temp = temp.getNextBuffer();
             }
         }
@@ -251,11 +257,12 @@ public class BufferManager {
         builder.append("Report:\n");
         builder.append(String.format("\tIs tight: %s\n", isTight()?"yes":"no"));
 
-        Integer[] keyset = map.keySet().toArray(new Integer[]{});
+        Integer[] keyset = freeBuffers.keySet().toArray(new Integer[]{});
         if (keyset.length > 0) {
             Arrays.sort(keyset);
+            builder.append("\tFree buffers:\n");
             for (Integer i : keyset) {
-                builder.append(String.format("\tBuffers of size %5d: %5d\n", i - 1, map.get(i)));
+                builder.append(String.format("\t - size %3d: %3d\n", i - 1, freeBuffers.get(i)));
             }
         }
         else builder.append("\tNo free buffers left.\n");
@@ -268,4 +275,70 @@ public class BufferManager {
         writer.write(message);
         writer.newLine();
     }
+
+    private class BuddyBuffer {
+        private BuddyBuffer nextBuffer;
+        private BuddyBuffer prevBuffer;
+        private int index;
+        private int size;
+        private boolean assigned;
+
+        private void init(int index, int size, BuddyBuffer nextBuffer, BuddyBuffer prevBuffer){
+            this.index = index;
+            this.size = size;
+            this.nextBuffer = nextBuffer;
+            this.prevBuffer = prevBuffer;
+            assigned = false;
+        }
+
+        private BuddyBuffer(){ /* don't allow instantiation with no info */ };
+
+        public BuddyBuffer(int index, int size){
+            init(index, size, null, null);
+        }
+
+        /**
+         *
+         * @param index index of buffer
+         * @param size size of buffer
+         * @param nextBuffer next buffer in array
+         * @param prevBuffer previous buffer in array
+         */
+        public BuddyBuffer(int index, int size, BuddyBuffer nextBuffer, BuddyBuffer prevBuffer){
+            init(index, size, nextBuffer, prevBuffer);
+        }
+
+        // Public setters
+        public void setSize(int newSize) { size = newSize; }
+        public void setNextBuffer(BuddyBuffer nextBuffer) { this.nextBuffer = nextBuffer; }
+        public void setPrevBuffer(BuddyBuffer prevBuffer) { this.prevBuffer = prevBuffer; }
+        public void assign() throws InvalidStateException {
+            if (assigned) throw new InvalidStateException("Buffer already assigned.");
+            assigned = true;
+        }
+        public void unassign() throws InvalidStateException{
+            if(!assigned) throw new InvalidStateException("Buffer already unassigned.");
+            assigned = false;
+        }
+
+        // Public getters
+        public int getIndex() { return index; }
+        public int getSize() { return size; }
+        public BuddyBuffer getNextBuffer() { return nextBuffer; }
+        public BuddyBuffer getPrevBuffer() { return prevBuffer; }
+        public boolean isAssigned() { return assigned; }
+
+        @Override
+        public String toString(){
+            return String.format("Buffer of size %d at index %d, is%s assigned", size, index, assigned?"":" not");
+        }
+    }
+
+    private class InvalidStateException extends Exception {
+        public InvalidStateException(String message){
+            super(message);
+        }
+        public InvalidStateException(){}
+    }
+
 }

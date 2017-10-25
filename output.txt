@@ -10,7 +10,8 @@ Expected:
 Actual:
 Report:
 	Is tight: no
-	Buffers of size   511:    10
+	Free buffers:
+	 - size 511:  10
 
 Requesting buffer of size 700, should fail.
 Failed to get block
@@ -19,18 +20,20 @@ Requesting buffer of size 7, should succeed
 Buffer allocated, index returned: 1
 Report:
 	Is tight: no
-	Buffers of size     7:     1
-	Buffers of size    15:     1
-	Buffers of size    31:     1
-	Buffers of size    63:     1
-	Buffers of size   127:     1
-	Buffers of size   255:     1
-	Buffers of size   511:     9
+	Free buffers:
+	 - size   7:   1
+	 - size  15:   1
+	 - size  31:   1
+	 - size  63:   1
+	 - size 127:   1
+	 - size 255:   1
+	 - size 511:   9
 
 Returning buffer at index 1
 Report:
 	Is tight: no
-	Buffers of size   511:    10
+	Free buffers:
+	 - size 511:  10
 
 Requesting 10 max size blocks
 Report:
@@ -46,38 +49,43 @@ Report:
 Returning all buffers.
 Report:
 	Is tight: no
-	Buffers of size   511:    10
+	Free buffers:
+	 - size 511:  10
 
 Requesting three 7 word buffers
 Report:
 	Is tight: no
-	Buffers of size     7:     1
-	Buffers of size    31:     1
-	Buffers of size    63:     1
-	Buffers of size   127:     1
-	Buffers of size   255:     1
-	Buffers of size   511:     9
+	Free buffers:
+	 - size   7:   1
+	 - size  31:   1
+	 - size  63:   1
+	 - size 127:   1
+	 - size 255:   1
+	 - size 511:   9
 
 Returning first buffer, should have two free 7 word buffers
 Report:
 	Is tight: no
-	Buffers of size     7:     2
-	Buffers of size    31:     1
-	Buffers of size    63:     1
-	Buffers of size   127:     1
-	Buffers of size   255:     1
-	Buffers of size   511:     9
+	Free buffers:
+	 - size   7:   2
+	 - size  31:   1
+	 - size  63:   1
+	 - size 127:   1
+	 - size 255:   1
+	 - size 511:   9
 
 Requesting random-sized buffers until manager returns -1
 Report:
 	Is tight: yes
-	Buffers of size    31:     1
-	Buffers of size    63:     1
-	Buffers of size   127:     1
+	Free buffers:
+	 - size   7:   1
+	 - size  63:   1
+	 - size 127:   1
 
 Returning all buffers
 Report:
 	Is tight: no
-	Buffers of size   511:    10
+	Free buffers:
+	 - size 511:  10
 
 -----------End Test Output-----------
