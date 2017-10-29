@@ -79,8 +79,7 @@ Report:
 	Is tight: yes
 	Free buffers:
 	 - size   7:   1
-	 - size  63:   1
-	 - size 127:   1
+	 - size  31:   1
 
 Returning all buffers
 Report:

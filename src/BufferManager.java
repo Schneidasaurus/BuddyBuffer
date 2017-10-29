@@ -114,6 +114,10 @@ public class BufferManager {
         }
     }
 
+    /**
+     * Determines if available space is tight (i.e. less than 2 full size blocks remaining)
+     * @return true if tight
+     */
     private boolean isTight(){
         int numEmptyBlocks = 0;
         BuddyBuffer temp = null;
@@ -124,9 +128,16 @@ public class BufferManager {
         return numEmptyBlocks < 2;
     }
 
+    /**
+     * Requests a buffer if size "size"
+     * Returns -1 if unable to find a suitable buffer
+     * Returns -2 if size is greater than MAX_BLOCK_SIZE
+     * @param size size of buffer needed
+     * @return index of buffer found or error code
+     */
     public int getBlock(int size) {
-        // Size requested is too big
-        if (size > MAX_BLOCK_SIZE-1) return -2;
+
+        if (size > MAX_BLOCK_SIZE-1) return -2; // Size requested is too big
 
         // Convert size to smallest buffer that can fit it
         for (int i = 3; i < 9; i++) {
@@ -140,13 +151,13 @@ public class BufferManager {
         // Find buffer that works
         BuddyBuffer bufferToReturn = null;
         for (int i = 0; i < NUM_BLOCKS && bufferToReturn == null; i++) {
-            BuddyBuffer temp = bufferBlocks[i][0];
-            while (temp != null && bufferToReturn == null){
+            BuddyBuffer temp = bufferBlocks[i][0]; // Retrieve first buffer in block
+            while (temp != null && bufferToReturn == null){ // Haven't reached end of block or found a buffer to return
                 if (temp.isAssigned() || temp.getSize() < size){ // current buffer is assigned or too small
                     temp = temp.getNextBuffer();
                 }
-                else {
-                    while (temp.getSize() / 2 > size && splitBuffer(temp.getIndex())){ }
+                else { // found a buffer that either works or can be broken down
+                    while (temp.getSize() / 2 > size && splitBuffer(temp.getIndex())){ /* splits buffer until it is small enough */ }
                     bufferToReturn = temp;
                     try {
                         bufferToReturn.assign();
@@ -162,10 +173,13 @@ public class BufferManager {
         return bufferToReturn != null ? bufferToReturn.getIndex()+1 : -1;
     }
 
+    /**
+     * Splits the buffer at index "index" in two
+     * @param index index of the buffer to be split
+     * @return true if able to split
+     */
     private boolean splitBuffer(int index){
-        int block = index / MAX_BLOCK_SIZE;
-        int relativeIndex = index % MAX_BLOCK_SIZE;
-        BuddyBuffer bufferToSplit = bufferBlocks[block][relativeIndex];
+        BuddyBuffer bufferToSplit = findBuffer(index);
         int newSize = bufferToSplit.getSize() / 2;
 
         if (newSize < Math.pow(2,3)) return false;
@@ -174,17 +188,19 @@ public class BufferManager {
         BuddyBuffer newBuffer = new BuddyBuffer(index + newSize, newSize);
         newBuffer.setNextBuffer(bufferToSplit.getNextBuffer());
         newBuffer.setPrevBuffer(bufferToSplit);
-        bufferBlocks[block][relativeIndex+newSize] = newBuffer;
+        addBuffer(index + newSize, newBuffer);
         if (bufferToSplit.getNextBuffer() != null)bufferToSplit.getNextBuffer().setPrevBuffer(newBuffer);
         bufferToSplit.setNextBuffer(newBuffer);
         return true;
     }
 
+    /**
+     * Return and free up buffer at "index"
+     * @param index index of buffer to be returned
+     */
     public void returnBuffer(int index){
         index--;
-        int block = index / MAX_BLOCK_SIZE;
-        int relativeIndex = index % MAX_BLOCK_SIZE;
-        BuddyBuffer returnedBuffer = bufferBlocks[block][relativeIndex];
+        BuddyBuffer returnedBuffer = findBuffer(index);
         try {
             returnedBuffer.unassign();
         }
@@ -198,10 +214,15 @@ public class BufferManager {
         tryJoinBuffers(index);
     }
 
+    /**
+     * Try to join the buffer at "index" with its buddy
+     * @param index index of buffer to try and join
+     */
     private void tryJoinBuffers(int index){
+        /*
         int block = index / MAX_BLOCK_SIZE;
-        int relativeIndex = index % MAX_BLOCK_SIZE;
-        BuddyBuffer bufferToJoin = bufferBlocks[block][relativeIndex];
+        int relativeIndex = index % MAX_BLOCK_SIZE;*/
+        BuddyBuffer bufferToJoin = findBuffer(index);//bufferBlocks[block][relativeIndex];
 
         while (true) {
             // Buffer passed is assigned
@@ -212,10 +233,12 @@ public class BufferManager {
             int i = ((bufferToJoin.getIndex() / bufferToJoin.getSize()) % 2);
 
             if (i == 0) { // buddy is next buffer
-                if (bufferToJoin.getNextBuffer() == null || bufferToJoin.getNextBuffer().getSize() != bufferToJoin.getSize() || bufferToJoin.getNextBuffer().isAssigned()) return; // Buffer's buddy is assigned
+                if (bufferToJoin.getNextBuffer() == null || bufferToJoin.getNextBuffer().getSize() != bufferToJoin.getSize()
+                        || bufferToJoin.getNextBuffer().isAssigned()) return; // Buffer's buddy is assigned
                 joinBuffers(bufferToJoin);
             } else { // buddy is previous buffer
-                if (bufferToJoin.getPrevBuffer() == null || bufferToJoin.getPrevBuffer().getSize() != bufferToJoin.getSize()|| bufferToJoin.getPrevBuffer().isAssigned()) return; // Buffer's buddy is assigned
+                if (bufferToJoin.getPrevBuffer() == null || bufferToJoin.getPrevBuffer().getSize() != bufferToJoin.getSize()
+                        || bufferToJoin.getPrevBuffer().isAssigned()) return; // Buffer's buddy is assigned
                 else {
                     bufferToJoin = bufferToJoin.getPrevBuffer();
                     joinBuffers(bufferToJoin);
@@ -224,6 +247,10 @@ public class BufferManager {
         }
     }
 
+    /**
+     * Joins buffer that is passed with its buddy
+     * @param buffer buffer to join. Should always be the first buddy
+     */
     private void joinBuffers(BuddyBuffer buffer){
         BuddyBuffer bufferToDelete = buffer.getNextBuffer();
         BuddyBuffer newNextBuffer = bufferToDelete.getNextBuffer();
@@ -233,24 +260,51 @@ public class BufferManager {
         buffer.setSize(buffer.getSize()*2);
     }
 
-    private String createReport(){
-        HashMap<Integer, Integer> freeBuffers = new HashMap<>();
+    /**
+     * Returns the buffer at index "index"
+     * @param index index of buffer to find
+     * @return Buffer at index
+     */
+    private BuddyBuffer findBuffer(int index){
+        int block = index / MAX_BLOCK_SIZE;
+        int relativeIndex = index % MAX_BLOCK_SIZE;
+        return bufferBlocks[block][relativeIndex];
+    }
+
+    /**
+     * Puts a buffer in bufferBlock at "index"
+     * @param index index at which to place buffer
+     * @param buffer buffer to add to bufferBlock
+     */
+    private void addBuffer(int index, BuddyBuffer buffer){
+        int block = index / MAX_BLOCK_SIZE;
+        int relativeIndex = index % MAX_BLOCK_SIZE;
+        bufferBlocks[block][relativeIndex] = buffer;
+    }
+
+    HashMap<Integer, Integer> freeBuffers(){
+        HashMap<Integer, Integer> freeBufferMap = new HashMap<>();
         BuddyBuffer temp = null;
-        for (int i = 0; i < NUM_BLOCKS; i++) {
+        for (int i = 0; i < NUM_BLOCKS; i++){
             temp = bufferBlocks[i][0];
             while (temp != null){
-                if (temp.isAssigned()) {
+                if (temp.isAssigned()){
                     temp = temp.getNextBuffer();
                     continue;
                 }
-                if (freeBuffers.containsKey(temp.getSize())){
-                    int n = freeBuffers.get(temp.getSize());
-                    freeBuffers.put(temp.getSize(), n + 1);
+                if (freeBufferMap.containsKey(temp.getSize())){
+                    int n = freeBufferMap.get(temp.getSize());
+                    freeBufferMap.put(temp.getSize(), n + 1);
                 }
-                else freeBuffers.put(temp.getSize(), 1);
+                else freeBufferMap.put(temp.getSize(), 1);
                 temp = temp.getNextBuffer();
             }
         }
+        return freeBufferMap;
+    }
+
+    private String createReport(){
+        HashMap<Integer, Integer> freeBuffers = freeBuffers();
 
         StringBuilder builder = new StringBuilder();
 
@@ -293,12 +347,17 @@ public class BufferManager {
 
         private BuddyBuffer(){ /* don't allow instantiation with no info */ };
 
+        /**
+         * Builds buddy buffer with next and previous set to void
+         * @param index index of the buffer
+         * @param size size of the buffer
+         */
         public BuddyBuffer(int index, int size){
             init(index, size, null, null);
         }
 
         /**
-         *
+         * Builds buffer with next and previous buffers assigned
          * @param index index of buffer
          * @param size size of buffer
          * @param nextBuffer next buffer in array
